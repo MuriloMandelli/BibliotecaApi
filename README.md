@@ -1,3 +1,5 @@
+# Integrante: Murilo Mandelli da Silva
+
 # Biblioteca API: REST + gRPC sobre o mesmo Domínio
 
 Trabalho N1 de Arquitetura de Software. API de uma biblioteca (livros e empréstimos) que expõe
@@ -13,7 +15,7 @@ Trabalho N1 de Arquitetura de Software. API de uma biblioteca (livros e emprést
 
 Relação: um Livro tem N Empréstimos.
 
-### Regras de negócio (camada de Domínio, em `Services/`)
+### Regras de negócio (camada de Domínio, em `Dominio/Services/`)
 
 A regra principal **cruza os dois agregados** (equivalente a "a marca precisa estar ativa" da VeiculosApi):
 
@@ -26,7 +28,7 @@ A regra principal **cruza os dois agregados** (equivalente a "a marca precisa es
 
 ### Exceções de Domínio → status
 
-| Exceção (Domínio) | REST (`Middleware/ExceptionHandlingMiddleware`) | gRPC (`Grpc/DomainExceptionInterceptor`) |
+| Exceção (Domínio) | REST (`Apresentacao/Middleware/ExceptionHandlingMiddleware`) | gRPC (`Apresentacao/Grpc/DomainExceptionInterceptor`) |
 |---|---|---|
 | `NotFoundException` | 404 Not Found | `NotFound` |
 | `ConflictException` (ISBN duplicado) | 409 Conflict | `AlreadyExists` |
@@ -36,25 +38,66 @@ A regra principal **cruza os dois agregados** (equivalente a "a marca precisa es
 Nenhum Controller ou GrpcService tem `if`/`try-catch` decidindo status: o Domínio lança a
 exceção e cada lado da Apresentação traduz num lugar só.
 
-## Como rodar
+## Pré-requisitos
 
-### Docker (recomendado)
+Basta **uma** das opções:
+
+| Opção | O que instalar |
+|---|---|
+| **A. Docker** (recomendada) | [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows/macOS) ou Docker Engine + Compose (Linux), **aberto e rodando** |
+| **B. Sem Docker** | [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (conferir com `dotnet --version`, precisa começar com 8) |
+
+Não precisa instalar banco de dados: o SQLite é um arquivo criado sozinho na primeira execução.
+Na primeira vez é preciso **internet** (o Docker baixa as imagens do .NET e o .NET baixa os pacotes NuGet).
+
+Opcionais, só para testar: um navegador (já basta), [Postman](https://www.postman.com/downloads/)
+e/ou [grpcurl](https://github.com/fullstorydev/grpcurl/releases).
+
+## Como rodar (passo a passo)
+
+1. Extraia o `.zip` (ou `git clone https://github.com/MuriloMandelli/BibliotecaApi.git`).
+2. Abra um terminal **na pasta raiz do projeto**, a que tem o `Dockerfile` e o `docker-compose.yml`.
+
+### Opção A: Docker
 
 ```bash
 docker compose up --build
 ```
 
-(ou `docker build -t biblioteca-api .` + `docker run -p 8080:8080 -p 8081:8081 biblioteca-api`)
+A primeira vez leva 1 a 3 minutos. Está pronto quando aparecer `Now listening on: http://[::]:8080`.
 
-### Sem Docker (.NET 8 SDK)
+(Alternativa sem compose: `docker build -t biblioteca-api .` e depois
+`docker run -p 8080:8080 -p 8081:8081 biblioteca-api`.)
+
+- Parar: `Ctrl+C` no terminal.
+- **Zerar os dados** (voltar aos livros de exemplo): `docker compose down -v` e depois `docker compose up`.
+
+### Opção B: sem Docker (.NET 8 SDK)
 
 ```bash
 cd BibliotecaApi
 dotnet run
 ```
 
+- Parar: `Ctrl+C`.
+- **Zerar os dados:** apagar o arquivo `BibliotecaApi/biblioteca.db` e rodar de novo.
+
+### 3. Abrir no navegador
+
+- **http://localhost:8080**: painel de testes (REST e gRPC com botões, sem precisar de outra ferramenta)
+- **http://localhost:8080/swagger**: Swagger (documentação e testes REST)
+- **localhost:8081**: gRPC nativo (Postman ou grpcurl, ver abaixo)
+
 O banco SQLite é criado sozinho e já vem com 3 livros de exemplo. "O Hobbit" (id 3) já nasce
 com o único exemplar emprestado, para demonstrar a regra de disponibilidade.
+
+### Problemas comuns
+
+- **"port is already allocated" / "address already in use":** outro programa está usando a porta
+  8080 ou 8081. Feche esse programa (ou pare outro container com `docker ps` e `docker stop <id>`).
+- **`docker` não é reconhecido / "cannot connect to the Docker daemon":** o Docker Desktop não está
+  instalado ou não foi aberto.
+- **Dados "estranhos" nos testes** (ex.: O Hobbit já devolvido): zere os dados como explicado acima.
 
 ## Painel de testes (navegador)
 
@@ -110,7 +153,7 @@ Coleção pronta para importar no Postman: `postman/BibliotecaApi-REST.postman_c
 
 ### Postman
 New → **gRPC** → URL `localhost:8081` → aba *Service definition* → **Use server reflection**
-(ou importe os arquivos de `BibliotecaApi/Protos/`). Escolha o método e mande a mensagem, por exemplo
+(ou importe os arquivos de `BibliotecaApi/Apresentacao/Protos/`). Deixe o TLS (cadeado) desligado. Escolha o método e mande a mensagem, por exemplo
 `biblioteca.EmprestimosService/Criar` com `{"livro_id": 3, "nome_leitor": "Joao", "prazo_dias": 7}`
 → volta `FAILED_PRECONDITION`.
 
