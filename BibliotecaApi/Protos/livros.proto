@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+option csharp_namespace = "BibliotecaApi.Grpc";
+
+import "google/protobuf/empty.proto";
+
+package biblioteca;
+
+service LivrosService {
+  rpc Listar (ListarLivrosRequest) returns (ListarLivrosResponse);
+  rpc ObterPorId (ObterLivroRequest) returns (LivroResponse);
+  rpc Criar (CriarLivroRequest) returns (LivroResponse);
+  rpc Editar (EditarLivroRequest) returns (LivroResponse);
+  rpc Excluir (ExcluirLivroRequest) returns (google.protobuf.Empty);
+}
+
+message ListarLivrosRequest {
+  optional string busca = 1;
+}
+
+message ListarLivrosResponse {
+  repeated LivroResponse livros = 1;
+}
+
+message ObterLivroRequest {
+  int32 id = 1;
+}
+
+message CriarLivroRequest {
+  string titulo = 1;
+  string autor = 2;
+  string isbn = 3;
+  int32 total_exemplares = 4;
+}
+
+message EditarLivroRequest {
+  int32 id = 1;
+  string titulo = 2;
+  string autor = 3;
+  string isbn = 4;
+  int32 total_exemplares = 5;
+}
+
+message ExcluirLivroRequest {
+  int32 id = 1;
+}
+
+message LivroResponse {
+  int32 id = 1;
+  string titulo = 2;
+  string autor = 3;
+  string isbn = 4;
+  int32 total_exemplares = 5;
+  int32 exemplares_disponiveis = 6;
+}

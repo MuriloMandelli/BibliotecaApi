@@ -1,0 +1,78 @@
+{
+  "info": {
+    "name": "Biblioteca API (REST)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{ "key": "base", "value": "http://localhost:8080" }],
+  "item": [
+    {
+      "name": "Livros",
+      "item": [
+        { "name": "Listar livros", "request": { "method": "GET", "url": "{{base}}/api/livros" } },
+        { "name": "Buscar livros (?busca=)", "request": { "method": "GET", "url": "{{base}}/api/livros?busca=Clean" } },
+        { "name": "Obter livro 1", "request": { "method": "GET", "url": "{{base}}/api/livros/1" } },
+        { "name": "Obter livro 999 (404)", "request": { "method": "GET", "url": "{{base}}/api/livros/999" } },
+        {
+          "name": "Criar livro (201)",
+          "request": {
+            "method": "POST", "url": "{{base}}/api/livros",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"titulo\": \"Refactoring\",\n  \"autor\": \"Martin Fowler\",\n  \"isbn\": \"9780134757599\",\n  \"totalExemplares\": 2\n}" }
+          }
+        },
+        {
+          "name": "Criar livro com ISBN duplicado (409)",
+          "request": {
+            "method": "POST", "url": "{{base}}/api/livros",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"titulo\": \"Copia\",\n  \"autor\": \"Alguem\",\n  \"isbn\": \"9780132350884\",\n  \"totalExemplares\": 1\n}" }
+          }
+        },
+        {
+          "name": "Editar livro 1",
+          "request": {
+            "method": "PUT", "url": "{{base}}/api/livros/1",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"titulo\": \"Clean Code (2a ed.)\",\n  \"autor\": \"Robert C. Martin\",\n  \"isbn\": \"9780132350884\",\n  \"totalExemplares\": 5\n}" }
+          }
+        },
+        { "name": "Excluir O Hobbit com empréstimo ativo (400)", "request": { "method": "DELETE", "url": "{{base}}/api/livros/3" } },
+        { "name": "Excluir livro 2 (204)", "request": { "method": "DELETE", "url": "{{base}}/api/livros/2" } }
+      ]
+    },
+    {
+      "name": "Empréstimos",
+      "item": [
+        { "name": "Listar empréstimos", "request": { "method": "GET", "url": "{{base}}/api/emprestimos" } },
+        { "name": "Listar só ativos", "request": { "method": "GET", "url": "{{base}}/api/emprestimos?ativos=true" } },
+        { "name": "Obter empréstimo 1", "request": { "method": "GET", "url": "{{base}}/api/emprestimos/1" } },
+        {
+          "name": "Emprestar Clean Code (201)",
+          "request": {
+            "method": "POST", "url": "{{base}}/api/emprestimos",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"livroId\": 1,\n  \"nomeLeitor\": \"Joao Silva\",\n  \"prazoDias\": 7\n}" }
+          }
+        },
+        {
+          "name": "Emprestar O Hobbit sem exemplar (400, regra cruzada)",
+          "request": {
+            "method": "POST", "url": "{{base}}/api/emprestimos",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"livroId\": 3,\n  \"nomeLeitor\": \"Joao Silva\",\n  \"prazoDias\": 7\n}" }
+          }
+        },
+        {
+          "name": "Emprestar livro inexistente (404)",
+          "request": {
+            "method": "POST", "url": "{{base}}/api/emprestimos",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"livroId\": 999,\n  \"nomeLeitor\": \"Joao Silva\",\n  \"prazoDias\": 7\n}" }
+          }
+        },
+        { "name": "Devolver empréstimo 1 (200)", "request": { "method": "POST", "url": "{{base}}/api/emprestimos/1/devolucao" } },
+        { "name": "Excluir empréstimo 1 (204 se já devolvido)", "request": { "method": "DELETE", "url": "{{base}}/api/emprestimos/1" } }
+      ]
+    }
+  ]
+}

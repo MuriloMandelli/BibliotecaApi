@@ -1,0 +1,12 @@
+services:
+  biblioteca-api:
+    build: .
+    container_name: biblioteca-api
+    ports:
+      - "8080:8080"   # REST + Swagger
+      - "8081:8081"   # gRPC
+    volumes:
+      - biblioteca-data:/app/data
+
+volumes:
+  biblioteca-data:

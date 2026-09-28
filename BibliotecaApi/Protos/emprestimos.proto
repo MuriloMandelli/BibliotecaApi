@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+option csharp_namespace = "BibliotecaApi.Grpc";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+package biblioteca;
+
+service EmprestimosService {
+  rpc Listar (ListarEmprestimosRequest) returns (ListarEmprestimosResponse);
+  rpc ObterPorId (ObterEmprestimoRequest) returns (EmprestimoResponse);
+  rpc Criar (CriarEmprestimoRequest) returns (EmprestimoResponse);
+  rpc Devolver (DevolverEmprestimoRequest) returns (EmprestimoResponse);
+  rpc Excluir (ExcluirEmprestimoRequest) returns (google.protobuf.Empty);
+}
+
+message ListarEmprestimosRequest {
+  optional int32 livro_id = 1;
+  optional bool ativos = 2;
+}
+
+message ListarEmprestimosResponse {
+  repeated EmprestimoResponse emprestimos = 1;
+}
+
+message ObterEmprestimoRequest {
+  int32 id = 1;
+}
+
+message CriarEmprestimoRequest {
+  int32 livro_id = 1;
+  string nome_leitor = 2;
+  int32 prazo_dias = 3;
+}
+
+message DevolverEmprestimoRequest {
+  int32 id = 1;
+}
+
+message ExcluirEmprestimoRequest {
+  int32 id = 1;
+}
+
+message EmprestimoResponse {
+  int32 id = 1;
+  int32 livro_id = 2;
+  string livro_titulo = 3;
+  string nome_leitor = 4;
+  google.protobuf.Timestamp data_emprestimo = 5;
+  google.protobuf.Timestamp data_prevista_devolucao = 6;
+  google.protobuf.Timestamp data_devolucao = 7; // vazio enquanto o livro não foi devolvido
+  bool ativo = 8;
+}
