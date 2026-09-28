@@ -117,18 +117,24 @@ grpcurl -plaintext -d '{"id":1}' localhost:8081 biblioteca.EmprestimosService/De
 
 ## Onde cada camada vive
 
+O código fica dividido em uma pasta por camada:
+
 ```
 BibliotecaApi/
-├── Controllers/     Apresentação REST   (LivrosController, EmprestimosController)
-├── Grpc/            Apresentação gRPC   (LivroGrpcService, EmprestimoGrpcService, DomainExceptionInterceptor)
-├── Middleware/      Apresentação REST   (ExceptionHandlingMiddleware: exceção -> HTTP)
-├── Protos/          Contrato gRPC (contract-first: livros.proto, emprestimos.proto)
-├── DTOs/            Objetos de entrada/saída do Domínio
-├── Services/        DOMÍNIO: regras de negócio (ILivroService, IEmprestimoService + implementações)
-├── Exceptions/      Exceções de Domínio (NotFound, Conflict, RegraNegocio)
-├── Repositories/    REPOSITÓRIO: acesso a dados com EF Core (ILivroRepository, IEmprestimoRepository)
-├── Models/          Entidades (Livro, Emprestimo)
-└── Data/            DbContext (SQLite) + seed
+├── Apresentacao/
+│   ├── Controllers/   REST   (LivrosController, EmprestimosController)
+│   ├── Grpc/          gRPC   (LivroGrpcService, EmprestimoGrpcService, DomainExceptionInterceptor)
+│   ├── Middleware/    REST   (ExceptionHandlingMiddleware: exceção -> HTTP)
+│   └── Protos/        Contrato gRPC (contract-first: livros.proto, emprestimos.proto)
+├── Dominio/
+│   ├── Services/      Regras de negócio (ILivroService, IEmprestimoService + implementações)
+│   ├── Exceptions/    Exceções de Domínio (NotFound, Conflict, RegraNegocio)
+│   └── DTOs/          Objetos de entrada/saída do Domínio
+├── Repositorio/
+│   ├── Repositories/  Acesso a dados com EF Core (ILivroRepository, IEmprestimoRepository)
+│   ├── Models/        Entidades (Livro, Emprestimo)
+│   └── Data/          DbContext (SQLite) + seed
+└── Program.cs         Liga as camadas por injeção de dependência e abre as portas
 ```
 
 **Ponto central (baixo acoplamento):** `LivrosController` e `LivroGrpcService` recebem a **mesma**

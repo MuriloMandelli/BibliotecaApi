@@ -17,8 +17,8 @@
 
   <!-- Contract-first: as classes gRPC são geradas a partir destes .proto no build -->
   <ItemGroup>
-    <Protobuf Include="Protos\livros.proto" GrpcServices="Server" />
-    <Protobuf Include="Protos\emprestimos.proto" GrpcServices="Server" />
+    <Protobuf Include="Apresentacao/Protos/livros.proto" GrpcServices="Server" />
+    <Protobuf Include="Apresentacao/Protos/emprestimos.proto" GrpcServices="Server" />
   </ItemGroup>
 
 </Project>
