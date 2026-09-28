@@ -56,11 +56,21 @@ dotnet run
 O banco SQLite é criado sozinho e já vem com 3 livros de exemplo. "O Hobbit" (id 3) já nasce
 com o único exemplar emprestado, para demonstrar a regra de disponibilidade.
 
+## Painel de testes (navegador)
+
+Abra **http://localhost:8080**: uma tela com a demonstração guiada (um botão por passo) e um
+"teste livre" onde cada ação tem os botões **via REST** e **via gRPC**, lado a lado, mostrando o
+status e a resposta de cada protocolo.
+
+Como navegador não fala gRPC puro, a tela usa **gRPC-Web** (`UseGrpcWeb` no `Program.cs`), que
+chama os mesmos `LivroGrpcService` / `EmprestimoGrpcService` pela porta 8080. Postman e grpcurl
+continuam usando o gRPC nativo na 8081.
+
 ## Portas
 
 | Porta | Protocolo | Uso |
 |---|---|---|
-| **8080** | HTTP/1.1 | REST + Swagger em http://localhost:8080/swagger |
+| **8080** | HTTP/1.1 | Painel de testes em http://localhost:8080, REST, gRPC-Web e Swagger em /swagger |
 | **8081** | HTTP/2 (h2c) | gRPC (com Server Reflection ligado) |
 
 São portas separadas porque, sem TLS, o Kestrel não consegue negociar HTTP/1.1 e HTTP/2 na mesma porta.

@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Biblioteca API · Painel de testes</title>
+<style>
+  :root {
+    --bg: #F5F3EE; --card: #FCFBF8; --line: #DDD8CC;
+    --ink: #1A2230; --muted: #4A5363; --navy: #16202E;
+    --rest: #B35A14; --rest-bg: #FBE3CF;
+    --grpc: #2F6FB3; --grpc-bg: #DCE8F6;
+    --ok: #2E7D4F; --ok-bg: #DDF0E3; --err: #B3261E; --err-bg: #FADBD8;
+    --mono: "Cascadia Code", Consolas, "Courier New", monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 "Segoe UI", system-ui, Arial, sans-serif; }
+  header { background: var(--navy); color: #F5F3EE; padding: 28px 16px; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+  header .wrap { padding: 0; }
+  h1 { margin: 0 0 6px; font-size: 30px; }
+  header p { margin: 0; color: #B9C3D1; }
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+  .legend a { color: #7FB2EC; }
+  .badge { display: inline-block; font-weight: 700; font-size: 13px; padding: 3px 10px; border-radius: 999px; letter-spacing: .5px; }
+  .b-rest { background: var(--rest-bg); color: #8A3F07; }
+  .b-grpc { background: var(--grpc-bg); color: #1F4F85; }
+  h2 { font-size: 24px; margin: 36px 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+  .step-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .num { width: 34px; height: 34px; border-radius: 50%; background: var(--navy); color: #fff; display: grid; place-items: center; font-weight: 700; flex: none; }
+  .step-title { font-weight: 700; font-size: 18px; }
+  .hint { color: var(--muted); margin: 6px 0 10px; }
+  .req { font-family: var(--mono); font-size: 13px; background: #EEEBE3; border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; word-break: break-word; margin: 8px 0; }
+  button { font: inherit; font-weight: 600; border: 0; border-radius: 10px; padding: 10px 18px; cursor: pointer; color: #fff; }
+  button.rest { background: var(--rest); }
+  button.grpc { background: var(--grpc); }
+  button:disabled { opacity: .6; cursor: wait; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .fields { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 12px; }
+  .fields label { display: flex; flex-direction: column; font-size: 13px; color: var(--muted); gap: 3px; }
+  .fields input, .fields select { font: inherit; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; background: #fff; min-width: 110px; }
+  .btns { display: flex; gap: 10px; flex-wrap: wrap; }
+  .result { margin-top: 12px; border-radius: 10px; border: 1px solid var(--line); overflow: hidden; }
+  .result .top { display: flex; align-items: center; gap: 10px; padding: 8px 12px; font-weight: 700; flex-wrap: wrap; }
+  .result.ok .top { background: var(--ok-bg); color: var(--ok); }
+  .result.err .top { background: var(--err-bg); color: var(--err); }
+  .result pre { margin: 0; padding: 10px 12px; font-family: var(--mono); font-size: 13px; background: #fff; max-height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-word; }
+  .result .via { font-weight: 600; font-size: 13px; opacity: .85; }
+  .placeholder { color: var(--muted); font-size: 14px; margin-top: 10px; }
+  footer { color: var(--muted); font-size: 14px; padding: 30px 16px 50px; text-align: center; }
+  @media (max-width: 760px) { .row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Biblioteca API · Painel de testes</h1>
+    <p>Os mesmos casos de uso por REST e por gRPC, chamando o mesmo Domínio.</p>
+    <div class="legend">
+      <span class="badge b-rest">REST</span><span>HTTP + JSON em /api/...</span>
+      <span class="badge b-grpc">gRPC</span><span>serviços gRPC (via gRPC-Web no navegador)</span>
+      <span>·</span><a href="/swagger">abrir Swagger</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <h2>Demonstração guiada</h2>
+  <p class="sub">Clique em "Executar" em cada passo, na ordem.</p>
+  <div id="guided"></div>
+
+  <h2>Teste livre: a mesma ação pelos dois protocolos</h2>
+  <p class="sub">Preencha os campos e compare a resposta do REST com a do gRPC.</p>
+  <div id="free"></div>
+</main>
+
+<footer>Os logs de cada camada ([Apresentação], [Domínio], [Repositório]) aparecem no terminal onde a API está rodando.</footer>
+
+<script>
+/* =====================================================================
+   Chamada REST: fetch comum com JSON
+   ===================================================================== */
+async function callRest(method, url, body) {
+  const opts = { method, headers: {} };
+  if (body !== undefined) {
+    opts.headers["Content-Type"] = "application/json";
+    opts.body = JSON.stringify(body);
+  }
+  const res = await fetch(url, opts);
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  const nomes = { 200: "OK", 201: "Created", 204: "No Content", 400: "Bad Request", 404: "Not Found", 409: "Conflict", 500: "Internal Server Error" };
+  return {
+    ok: res.ok,
+    status: `HTTP ${res.status} ${nomes[res.status] || res.statusText}`,
+    request: `${method} ${url}${body !== undefined ? "\n" + JSON.stringify(body) : ""}`,
+    data: res.status === 204 ? "(sem corpo: excluído com sucesso)" : data
+  };
+}
+
+/* =====================================================================
+   Chamada gRPC via gRPC-Web: codifica/decodifica Protobuf à mão,
+   seguindo os contratos de Protos/livros.proto e Protos/emprestimos.proto
+   ===================================================================== */
+const GRPC_CODES = ["OK", "CANCELLED", "UNKNOWN", "INVALID_ARGUMENT", "DEADLINE_EXCEEDED", "NOT_FOUND",
+  "ALREADY_EXISTS", "PERMISSION_DENIED", "RESOURCE_EXHAUSTED", "FAILED_PRECONDITION", "ABORTED",
+  "OUT_OF_RANGE", "UNIMPLEMENTED", "INTERNAL", "UNAVAILABLE", "DATA_LOSS", "UNAUTHENTICATED"];
+
+// Mensagens de resposta: número do campo -> [nome, tipo, repetido?]
+const SCHEMAS = {
+  Timestamp: { 1: ["seconds", "int"], 2: ["nanos", "int"] },
+  Empty: {},
+  LivroResponse: { 1: ["id", "int"], 2: ["titulo", "string"], 3: ["autor", "string"], 4: ["isbn", "string"],
+    5: ["total_exemplares", "int"], 6: ["exemplares_disponiveis", "int"] },
+  ListarLivrosResponse: { 1: ["livros", "LivroResponse", true] },
+  EmprestimoResponse: { 1: ["id", "int"], 2: ["livro_id", "int"], 3: ["livro_titulo", "string"], 4: ["nome_leitor", "string"],
+    5: ["data_emprestimo", "Timestamp"], 6: ["data_prevista_devolucao", "Timestamp"], 7: ["data_devolucao", "Timestamp"], 8: ["ativo", "bool"] },
+  ListarEmprestimosResponse: { 1: ["emprestimos", "EmprestimoResponse", true] }
+};
+
+function pushVarint(n, out) {
+  n = Number(n);
+  while (n > 127) { out.push((n % 128) + 128); n = Math.floor(n / 128); }
+  out.push(n);
+}
+
+// Mensagens de requisição: lista de [número, nome, tipo]
+function encode(fields, obj) {
+  const out = [];
+  for (const [num, name, type] of fields) {
+    const v = obj[name];
+    if (v === undefined || v === null || v === "") continue;
+    if (type === "string") {
+      const bytes = new TextEncoder().encode(String(v));
+      pushVarint(num * 8 + 2, out); pushVarint(bytes.length, out); out.push(...bytes);
+    } else {
+      pushVarint(num * 8, out); pushVarint(type === "bool" ? (v ? 1 : 0) : v, out);
+    }
+  }
+  return new Uint8Array(out);
+}
+
+function readVarint(buf, pos) {
+  let result = 0, mult = 1, b;
+  do { b = buf[pos.i++]; result += (b & 127) * mult; mult *= 128; } while (b & 128);
+  return result;
+}
+
+function decode(schemaName, buf) {
+  const schema = SCHEMAS[schemaName], obj = {}, pos = { i: 0 };
+  for (const [name, type, rep] of Object.values(schema)) {
+    obj[name] = rep ? [] : type === "int" ? 0 : type === "bool" ? false : type === "string" ? "" : null; // defaults do proto3
+  }
+  while (pos.i < buf.length) {
+    const key = readVarint(buf, pos), num = Math.floor(key / 8), wt = key % 8;
+    let raw;
+    if (wt === 0) raw = readVarint(buf, pos);
+    else if (wt === 2) { const len = readVarint(buf, pos); raw = buf.subarray(pos.i, pos.i + len); pos.i += len; }
+    else if (wt === 1) { pos.i += 8; continue; }
+    else if (wt === 5) { pos.i += 4; continue; }
+    const f = schema[num];
+    if (!f) continue;
+    const [name, type, rep] = f;
+    let v;
+    if (type === "int") v = raw;
+    else if (type === "bool") v = !!raw;
+    else if (type === "string") v = new TextDecoder().decode(raw);
+    else if (type === "Timestamp") { const t = decode("Timestamp", raw); v = new Date(t.seconds * 1000 + Math.floor(t.nanos / 1e6)).toISOString(); }
+    else v = decode(type, raw);
+    if (rep) obj[name].push(v); else obj[name] = v;
+  }
+  return obj;
+}
+
+async function callGrpc(service, method, reqFields, req, resSchema) {
+  const msg = encode(reqFields, req);
+  const body = new Uint8Array(5 + msg.length);          // frame gRPC: [flag][tamanho 4 bytes][mensagem]
+  new DataView(body.buffer).setUint32(1, msg.length);
+  body.set(msg, 5);
+
+  const res = await fetch(`/biblioteca.${service}/${method}`, {
+    method: "POST",
+    headers: { "content-type": "application/grpc-web+proto", "x-grpc-web": "1", "accept": "application/grpc-web+proto" },
+    body
+  });
+  const buf = new Uint8Array(await res.arrayBuffer());
+
+  let status = res.headers.get("grpc-status"), message = res.headers.get("grpc-message"), data = null, i = 0;
+  while (i + 5 <= buf.length) {
+    const flag = buf[i], len = new DataView(buf.buffer, buf.byteOffset + i + 1, 4).getUint32(0);
+    const payload = buf.subarray(i + 5, i + 5 + len);
+    i += 5 + len;
+    if (flag & 0x80) {                                     // frame de trailers: grpc-status / grpc-message
+      for (const line of new TextDecoder().decode(payload).split("\r\n")) {
+        const k = line.indexOf(":");
+        if (k < 0) continue;
+        const key = line.slice(0, k).trim().toLowerCase(), val = line.slice(k + 1).trim();
+        if (key === "grpc-status") status = val;
+        if (key === "grpc-message") message = val;
+      }
+    } else {
+      data = decode(resSchema, payload);
+    }
+  }
+  const code = status === null ? 2 : Number(status);
+  if (message) { try { message = decodeURIComponent(message); } catch { } }
+  return {
+    ok: code === 0,
+    status: `gRPC ${code} ${GRPC_CODES[code] || ""}`,
+    request: `biblioteca.${service}/${method}\n${JSON.stringify(req)}`,
+    data: code === 0 ? (resSchema === "Empty" ? "(Empty: excluído com sucesso)" : data) : { erro: message }
+  };
+}
+
+// Campos das mensagens de requisição (mesmos números do .proto)
+const REQ = {
+  ListarLivros: [[1, "busca", "string"]],
+  ObterLivro: [[1, "id", "int"]],
+  CriarLivro: [[1, "titulo", "string"], [2, "autor", "string"], [3, "isbn", "string"], [4, "total_exemplares", "int"]],
+  ExcluirLivro: [[1, "id", "int"]],
+  ListarEmprestimos: [[1, "livro_id", "int"], [2, "ativos", "bool"]],
+  CriarEmprestimo: [[1, "livro_id", "int"], [2, "nome_leitor", "string"], [3, "prazo_dias", "int"]],
+  Devolver: [[1, "id", "int"]]
+};
+
+/* =====================================================================
+   Ações (cada uma sabe chamar via REST e via gRPC)
+   ===================================================================== */
+const ACOES = {
+  listarLivros: {
+    rest: () => callRest("GET", "/api/livros"),
+    grpc: () => callGrpc("LivrosService", "Listar", REQ.ListarLivros, {}, "ListarLivrosResponse")
+  },
+  obterLivro: {
+    rest: v => callRest("GET", `/api/livros/${v.id}`),
+    grpc: v => callGrpc("LivrosService", "ObterPorId", REQ.ObterLivro, { id: +v.id }, "LivroResponse")
+  },
+  criarLivro: {
+    rest: v => callRest("POST", "/api/livros", { titulo: v.titulo, autor: v.autor, isbn: v.isbn, totalExemplares: +v.total }),
+    grpc: v => callGrpc("LivrosService", "Criar", REQ.CriarLivro, { titulo: v.titulo, autor: v.autor, isbn: v.isbn, total_exemplares: +v.total }, "LivroResponse")
+  },
+  excluirLivro: {
+    rest: v => callRest("DELETE", `/api/livros/${v.id}`),
+    grpc: v => callGrpc("LivrosService", "Excluir", REQ.ExcluirLivro, { id: +v.id }, "Empty")
+  },
+  emprestar: {
+    rest: v => callRest("POST", "/api/emprestimos", { livroId: +v.livroId, nomeLeitor: v.nome, prazoDias: +v.prazo }),
+    grpc: v => callGrpc("EmprestimosService", "Criar", REQ.CriarEmprestimo, { livro_id: +v.livroId, nome_leitor: v.nome, prazo_dias: +v.prazo }, "EmprestimoResponse")
+  },
+  listarEmprestimos: {
+    rest: v => callRest("GET", `/api/emprestimos${v.ativos === "sim" ? "?ativos=true" : ""}`),
+    grpc: v => callGrpc("EmprestimosService", "Listar", REQ.ListarEmprestimos, v.ativos === "sim" ? { ativos: true } : {}, "ListarEmprestimosResponse")
+  },
+  devolver: {
+    rest: v => callRest("POST", `/api/emprestimos/${v.id}/devolucao`),
+    grpc: v => callGrpc("EmprestimosService", "Devolver", REQ.Devolver, { id: +v.id }, "EmprestimoResponse")
+  }
+};
+
+/* =====================================================================
+   Tela
+   ===================================================================== */
+const GUIADA = [
+  { proto: "rest", acao: "listarLivros", vals: {}, titulo: "Listar os livros",
+    dica: "O Hobbit (id 3) tem 1 exemplar e ele já está emprestado: exemplaresDisponiveis = 0.",
+    req: "GET /api/livros" },
+  { proto: "rest", acao: "emprestar", vals: { livroId: 3, nome: "Joao", prazo: 7 }, titulo: "Emprestar O Hobbit pelo REST",
+    dica: "Esperado: HTTP 400. A regra cruzada barra: o Domínio consultou o livro e não tem exemplar.",
+    req: 'POST /api/emprestimos\n{"livroId": 3, "nomeLeitor": "Joao", "prazoDias": 7}' },
+  { proto: "grpc", acao: "emprestar", vals: { livroId: 3, nome: "Joao", prazo: 7 }, titulo: "O mesmo pedido pelo gRPC",
+    dica: "Esperado: FAILED_PRECONDITION com a MESMA mensagem. Mesma regra, só muda o código do protocolo.",
+    req: 'biblioteca.EmprestimosService/Criar\n{"livro_id": 3, "nome_leitor": "Joao", "prazo_dias": 7}' },
+  { proto: "rest", acao: "emprestar", vals: { livroId: 1, nome: "Joao", prazo: 7 }, titulo: "Emprestar Clean Code pelo REST",
+    dica: "Esperado: HTTP 201. Com exemplar disponível, o empréstimo é criado.",
+    req: 'POST /api/emprestimos\n{"livroId": 1, "nomeLeitor": "Joao", "prazoDias": 7}' },
+  { proto: "grpc", acao: "listarEmprestimos", vals: { ativos: "sim" }, titulo: "Listar os empréstimos ativos pelo gRPC",
+    dica: "O empréstimo criado pelo REST aparece aqui: mesmo Domínio, mesmo banco.",
+    req: 'biblioteca.EmprestimosService/Listar\n{"ativos": true}' }
+];
+
+const LIVRE = [
+  { acao: "emprestar", titulo: "Emprestar um livro", dica: "Livros de exemplo: 1 Clean Code, 2 Domain-Driven Design, 3 O Hobbit.",
+    campos: [["livroId", "Id do livro", "3", "number"], ["nome", "Nome do leitor", "Joao"], ["prazo", "Prazo (dias)", "7", "number"]] },
+  { acao: "listarLivros", titulo: "Listar livros", campos: [] },
+  { acao: "listarEmprestimos", titulo: "Listar empréstimos", campos: [["ativos", "Só ativos?", "sim", "select:sim,não"]] },
+  { acao: "devolver", titulo: "Devolver um empréstimo", dica: "O empréstimo 1 é o do Hobbit (vem pronto no banco).",
+    campos: [["id", "Id do empréstimo", "1", "number"]] },
+  { acao: "obterLivro", titulo: "Buscar livro por id", dica: "Tente 999 para ver o 404 / NOT_FOUND.",
+    campos: [["id", "Id do livro", "999", "number"]] },
+  { acao: "criarLivro", titulo: "Cadastrar livro", dica: "O ISBN 9780132350884 já existe (Clean Code): dá 409 / ALREADY_EXISTS.",
+    campos: [["titulo", "Título", "Copia"], ["autor", "Autor", "Alguem"], ["isbn", "ISBN", "9780132350884"], ["total", "Exemplares", "1", "number"]] },
+  { acao: "excluirLivro", titulo: "Excluir livro", dica: "O livro 3 está emprestado: a regra não deixa excluir.",
+    campos: [["id", "Id do livro", "3", "number"]] }
+];
+
+const esc = s => String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const nomeProto = p => p === "rest" ? "REST" : "gRPC";
+
+function renderResult(el, r, proto) {
+  el.className = "result " + (r.ok ? "ok" : "err");
+  el.innerHTML = `<div class="top"><span>${r.ok ? "Sucesso" : "Erro"}</span><span>${esc(r.status)}</span>
+    <span class="via">via ${nomeProto(proto)}</span></div>
+    <pre>${esc(typeof r.data === "string" ? r.data : JSON.stringify(r.data, null, 2))}</pre>`;
+}
+
+async function executar(btn, proto, acao, vals, el) {
+  btn.disabled = true;
+  try { renderResult(el, await ACOES[acao][proto](vals), proto); }
+  catch (e) { renderResult(el, { ok: false, status: "Falha de conexão", data: "A API está rodando? " + e.message }, proto); }
+  finally { btn.disabled = false; }
+}
+
+// Demonstração guiada
+const guided = document.getElementById("guided");
+GUIADA.forEach((p, i) => {
+  const card = document.createElement("div");
+  card.className = "card";
+  card.innerHTML = `<div class="step-head"><div class="num">${i + 1}</div>
+      <span class="badge b-${p.proto}">${nomeProto(p.proto)}</span><span class="step-title">${esc(p.titulo)}</span></div>
+    <p class="hint">${esc(p.dica)}</p>
+    <div class="req">${esc(p.req)}</div>
+    <button class="${p.proto}">Executar</button>
+    <div class="placeholder">O resultado aparece aqui.</div>`;
+  const btn = card.querySelector("button"), out = card.querySelector(".placeholder");
+  btn.onclick = () => executar(btn, p.proto, p.acao, p.vals, out);
+  guided.appendChild(card);
+});
+
+// Teste livre
+const free = document.getElementById("free");
+LIVRE.forEach(t => {
+  const card = document.createElement("div");
+  card.className = "card";
+  const campos = t.campos.map(([name, label, val, type]) => {
+    if (type && type.startsWith("select:")) {
+      const opts = type.slice(7).split(",").map(o => `<option${o === val ? " selected" : ""}>${o}</option>`).join("");
+      return `<label>${esc(label)}<select name="${name}">${opts}</select></label>`;
+    }
+    return `<label>${esc(label)}<input name="${name}" value="${esc(val)}" type="${type || "text"}"></label>`;
+  }).join("");
+  card.innerHTML = `<div class="step-title">${esc(t.titulo)}</div>
+    ${t.dica ? `<p class="hint">${esc(t.dica)}</p>` : ""}
+    ${campos ? `<div class="fields">${campos}</div>` : ""}
+    <div class="btns"><button class="rest">Enviar via REST</button><button class="grpc">Enviar via gRPC</button></div>
+    <div class="row"><div class="placeholder r-rest"></div><div class="placeholder r-grpc"></div></div>`;
+  const vals = () => Object.fromEntries([...card.querySelectorAll("input,select")].map(i => [i.name, i.value]));
+  const [bRest, bGrpc] = card.querySelectorAll("button");
+  bRest.onclick = () => executar(bRest, "rest", t.acao, vals(), card.querySelector(".r-rest"));
+  bGrpc.onclick = () => executar(bGrpc, "grpc", t.acao, vals(), card.querySelector(".r-grpc"));
+  free.appendChild(card);
+});
+</script>
+</body>
+</html>

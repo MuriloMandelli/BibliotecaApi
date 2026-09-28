@@ -69,18 +69,24 @@ using (var scope = app.Services.CreateScope())
     DbSeeder.Seed(db);
 }
 
+// Tela de testes (wwwroot/index.html) na raiz "/"
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseSwagger();
 app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", "Biblioteca API v1"));
 
 // Traduz as exceções de Domínio em respostas HTTP (lado REST)
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
+// gRPC-Web: deixa o navegador chamar os MESMOS serviços gRPC (na porta 8080),
+// já que navegador não fala gRPC puro. Postman/grpcurl seguem usando a 8081.
+app.UseGrpcWeb();
+
 app.MapControllers();
 
-app.MapGrpcService<LivroGrpcService>();
-app.MapGrpcService<EmprestimoGrpcService>();
+app.MapGrpcService<LivroGrpcService>().EnableGrpcWeb();
+app.MapGrpcService<EmprestimoGrpcService>().EnableGrpcWeb();
 app.MapGrpcReflectionService();
-
-app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 
 app.Run();
